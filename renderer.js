@@ -72,6 +72,17 @@ async function loadSources() {
   if (sources.length > 0) {
     startCapture(sources[0].id);
   }
+
+  // 발로란트가 "전체화면(독점)" 모드면 Windows/Electron이 그 창을 별도 캡처
+  // 대상으로 인식하지 못해 목록에 안 뜬다. 이 경우 게임 내 설정 > 비디오에서
+  // 화면모드를 "전체화면 창모드"로 바꾸면 창으로 잡혀서 훨씬 안정적으로 감지된다.
+  const hasValorantWindow = sources.some((s) => /valorant|발로란트/i.test(s.name));
+  const hintEl = document.getElementById('sourceHint');
+  if (hintEl) {
+    hintEl.textContent = hasValorantWindow
+      ? '✅ 목록에서 VALORANT 창을 직접 선택하세요. 다른 앱으로 전환해도 감지가 흔들리지 않아요.'
+      : '⚠️ 목록에 VALORANT 창이 안 보이면, 게임 내 설정 > 비디오 > 화면모드를 "전체화면"이 아니라 "전체화면 창모드"로 바꿔보세요. 그러면 창으로 잡혀서 알트탭해도 안정적으로 감지돼요. 그 전까지는 "전체 화면"을 선택하고, 다른 창을 볼 때 Ctrl+Alt+P로 감지를 빠르게 껐다 켜서 쓰세요.';
+  }
 }
 
 document.getElementById('refreshSources').addEventListener('click', loadSources);
@@ -210,6 +221,13 @@ document.getElementById('resetDefaults').addEventListener('click', () => {
 });
 
 // ===== 감지 루프 =====
+// "신뢰할 수 없는 프레임" 판단: 지정 영역의 색이 캘리브레이션한 두 기준색(살아있음/죽음)
+// 모두에서 너무 멀리 떨어져 있으면, 지금 캡처되고 있는 화면이 발로란트가 아닐 가능성이
+// 크다는 뜻이다 (예: "전체 화면"을 캡처 중인데 알트탭해서 인스타그램 등 다른 창을 보고
+// 있는 경우). 이런 프레임은 ALIVE/DEAD 중 억지로 하나를 고르지 않고 그냥 무시해서,
+// 다른 앱으로 전환했을 때 판정이 아무렇게나 튀는 걸(들쭉날쭉) 막는다.
+const UNRELIABLE_MARGIN = 1.4; // 두 기준색 사이 거리의 이 배수보다 멀면 '판정 불가'로 취급
+
 function detectTick() {
   if (!detectionEnabled || !region || !aliveColor || !deadColor) return;
 
@@ -218,10 +236,23 @@ function detectTick() {
 
   const distAlive = colorDistance(avg, aliveColor);
   const distDead = colorDistance(avg, deadColor);
-  const detected = distDead < distAlive ? 'DEAD' : 'ALIVE';
+  const distBetweenCalibrated = colorDistance(aliveColor, deadColor);
+
+  const minDist = Math.min(distAlive, distDead);
+  const isReliable = distBetweenCalibrated === 0 || minDist <= distBetweenCalibrated * UNRELIABLE_MARGIN;
 
   document.getElementById('debugColor').textContent =
-    `RGB(${avg.r.toFixed(0)}, ${avg.g.toFixed(0)}, ${avg.b.toFixed(0)}) | dAlive=${distAlive.toFixed(1)} dDead=${distDead.toFixed(1)}`;
+    `RGB(${avg.r.toFixed(0)}, ${avg.g.toFixed(0)}, ${avg.b.toFixed(0)}) | dAlive=${distAlive.toFixed(1)} dDead=${distDead.toFixed(1)}` +
+    (isReliable ? '' : ' ⚠️ 판정 불가 (다른 화면을 보고 있는 것 같아요)');
+
+  if (!isReliable) {
+    // 신뢰할 수 없는 프레임은 상태 전환 카운트에도 반영하지 않는다.
+    pendingState = null;
+    pendingCount = 0;
+    return;
+  }
+
+  const detected = distDead < distAlive ? 'DEAD' : 'ALIVE';
 
   if (detected === pendingState) {
     pendingCount++;
@@ -259,7 +290,18 @@ document.getElementById('detectionToggle').addEventListener('change', (e) => {
     captureTimer = setInterval(detectTick, 400);
   } else {
     clearInterval(captureTimer);
+    pendingState = null;
+    pendingCount = 0;
   }
+});
+
+// Ctrl+Alt+P: 게임(또는 다른 앱)에 포커스가 있어도 동작하는 전역 단축키로
+// 감지를 즉시 껐다 켤 수 있다. 알트탭해서 다른 창을 잠깐 볼 때 유용하다.
+window.electronAPI?.onToggleDetectionHotkey?.(() => {
+  const toggle = document.getElementById('detectionToggle');
+  if (!toggle) return;
+  toggle.checked = !toggle.checked;
+  toggle.dispatchEvent(new Event('change'));
 });
 
 // ===== 유튜브 IFrame API 비동기 로드 =====

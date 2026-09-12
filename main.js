@@ -1,4 +1,4 @@
-const { app, BrowserWindow, desktopCapturer, ipcMain } = require('electron');
+const { app, BrowserWindow, desktopCapturer, ipcMain, globalShortcut } = require('electron');
 const path = require('path');
 const http = require('http');
 const fs = require('fs');
@@ -94,9 +94,21 @@ ipcMain.handle('open-devtools', () => {
 app.whenReady().then(async () => {
   await startLocalServer();
   createWindow();
+
+  // 알트탭으로 다른 앱(인스타그램 등)을 볼 때, 게임에 포커스가 없어도
+  // 감지를 즉시 껐다 켤 수 있는 전역 단축키. 창 캡처가 아니라 "전체 화면"을
+  // 캡처할 수밖에 없는 상황(발로란트가 독점 전체화면일 때)에서 특히 유용하다.
+  globalShortcut.register('CommandOrControl+Alt+P', () => {
+    mainWindow?.webContents.send('toggle-detection-hotkey');
+  });
+
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();
   });
+});
+
+app.on('will-quit', () => {
+  globalShortcut.unregisterAll();
 });
 
 app.on('window-all-closed', () => {

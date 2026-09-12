@@ -1,0 +1,144 @@
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: -apple-system, "Segoe UI", "Malgun Gothic", sans-serif;
+  background: #111319;
+  color: #e6e8ee;
+}
+
+.app {
+  display: flex;
+  gap: 20px;
+  padding: 20px;
+  height: 100vh;
+}
+
+.panel {
+  background: #171a22;
+  border: 1px solid #262b38;
+  border-radius: 10px;
+  padding: 16px 18px;
+  overflow-y: auto;
+}
+
+.left { flex: 1.1; }
+.right { flex: 1; }
+
+h2 {
+  font-size: 14px;
+  color: #ff4655;
+  margin: 18px 0 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+h2:first-child { margin-top: 0; }
+
+.hint {
+  font-size: 12px;
+  color: #8b91a3;
+  margin: 0 0 8px;
+}
+
+select, input[type="text"] {
+  width: 100%;
+  padding: 8px 10px;
+  background: #0d0f14;
+  border: 1px solid #2c3140;
+  color: #e6e8ee;
+  border-radius: 6px;
+  font-size: 13px;
+}
+
+button {
+  margin-top: 8px;
+  padding: 8px 14px;
+  background: #ff4655;
+  border: none;
+  color: white;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+}
+button:hover { background: #ff5c6a; }
+
+.canvas-wrap {
+  position: relative;
+  width: 480px;
+  height: 270px;
+  border: 1px solid #2c3140;
+  border-radius: 6px;
+  overflow: hidden;
+}
+#preview, #overlay {
+  position: absolute;
+  top: 0; left: 0;
+  width: 480px;
+  height: 270px;
+}
+#overlay { cursor: crosshair; }
+
+.calib-row {
+  display: flex;
+  gap: 8px;
+}
+.calib-row button {
+  flex: 1;
+}
+
+.status-row {
+  margin-top: 14px;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.state-badge {
+  padding: 3px 10px;
+  border-radius: 12px;
+  font-weight: 700;
+  font-size: 12px;
+}
+.state-badge.alive { background: #1c3d2c; color: #4ade80; }
+.state-badge.dead { background: #3d1c1c; color: #f87171; }
+
+.debug-row {
+  margin-top: 6px;
+  font-size: 11px;
+  color: #5a6072;
+  font-family: monospace;
+}
+
+.yt-input-row {
+  display: flex;
+  gap: 8px;
+}
+.yt-input-row input { flex: 1; }
+.yt-input-row button { margin-top: 0; }
+
+#player {
+  margin-top: 12px;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.slider-row {
+  margin: 14px 0;
+}
+.slider-row label {
+  display: block;
+  font-size: 12px;
+  color: #b6bbca;
+  margin-bottom: 4px;
+}
+.slider-row input[type="range"] {
+  width: 100%;
+}
+
+.toggle-row {
+  margin-top: 20px;
+  padding-top: 14px;
+  border-top: 1px solid #262b38;
+  font-size: 14px;
+}

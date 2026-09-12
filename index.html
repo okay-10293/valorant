@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <title>발로란트 리스폰 뮤직</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="app">
+    <!-- 좌측: 캡처 소스 + 미리보기 + 영역 지정 -->
+    <div class="panel left">
+      <h2>1. 캡처할 화면 선택</h2>
+      <select id="sourceSelect"></select>
+      <button id="refreshSources">새로고침</button>
+
+      <h2>2. 감지 영역 지정</h2>
+      <p class="hint">미리보기 위에서 스펙테이터 UI(관전 중 표시)가 뜨는 부분을 드래그로 선택하세요.</p>
+      <div class="canvas-wrap">
+        <canvas id="preview" width="480" height="270"></canvas>
+        <canvas id="overlay" width="480" height="270"></canvas>
+      </div>
+
+      <h2>3. 캘리브레이션</h2>
+      <p class="hint">각 상태일 때 화면을 보면서 버튼을 눌러 기준색을 저장하세요.</p>
+      <div class="calib-row">
+        <button id="calibAlive">🟢 살아있을 때 저장</button>
+        <button id="calibDead">🔴 죽었을 때 저장</button>
+      </div>
+      <div class="status-row">
+        <span>현재 판정: </span>
+        <span id="stateLabel" class="state-badge alive">ALIVE</span>
+      </div>
+      <div class="debug-row">
+        <span id="debugColor">-</span>
+      </div>
+    </div>
+
+    <!-- 우측: 유튜브 + 볼륨 설정 -->
+    <div class="panel right">
+      <h2>유튜브</h2>
+      <div class="yt-input-row">
+        <input id="ytUrl" type="text" placeholder="유튜브 URL 또는 영상 ID 붙여넣기" />
+        <button id="loadYt">불러오기</button>
+      </div>
+      <div id="player"></div>
+
+      <h2>볼륨 설정</h2>
+      <div class="slider-row">
+        <label>평소(생존) 볼륨: <span id="quietVal">20</span>%</label>
+        <input type="range" id="quietVolume" min="0" max="100" value="20" />
+      </div>
+      <div class="slider-row">
+        <label>사망 시 볼륨: <span id="loudVal">80</span>%</label>
+        <input type="range" id="loudVolume" min="0" max="100" value="80" />
+      </div>
+      <div class="slider-row">
+        <label>전환 속도(페이드): <span id="fadeVal">800</span>ms</label>
+        <input type="range" id="fadeDuration" min="100" max="3000" step="100" value="800" />
+      </div>
+      <div class="slider-row">
+        <label>감지 민감도(연속 프레임): <span id="confirmVal">3</span></label>
+        <input type="range" id="confirmFrames" min="1" max="10" value="3" />
+      </div>
+
+      <div class="toggle-row">
+        <label><input type="checkbox" id="detectionToggle" /> 감지 시작</label>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://www.youtube.com/iframe_api"></script>
+  <script src="renderer.js"></script>
+</body>
+</html>

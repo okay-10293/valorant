@@ -379,7 +379,7 @@ function onYouTubeIframeAPIReady() {
   const playerOptions = {
     height: '220',
     width: '390',
-    playerVars: { autoplay: 0 },
+    playerVars: { autoplay: 0, origin: window.location.origin },
     events: {
       onReady: () => {
         activeSource = 'youtube';

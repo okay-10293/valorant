@@ -241,18 +241,51 @@ document.getElementById('detectionToggle').addEventListener('change', (e) => {
 // ===== 유튜브 플레이어 =====
 function extractVideoId(input) {
   input = input.trim();
-  const patterns = [
-    /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([\w-]{11})/,
-  ];
-  for (const p of patterns) {
-    const m = input.match(p);
-    if (m) return m[1];
-  }
+  // 순수 11자 영상 ID를 붙여넣은 경우
   if (/^[\w-]{11}$/.test(input)) return input;
+
+  // URL 형태는 URL 파서로 안전하게 분해 (파라미터 순서, shorts/live 등 형태 차이에 영향 안 받도록)
+  try {
+    const withProtocol = /^https?:\/\//.test(input) ? input : `https://${input}`;
+    const url = new URL(withProtocol);
+    const host = url.hostname.replace(/^www\.|^m\./, '');
+
+    if (host === 'youtu.be') {
+      const id = url.pathname.split('/').filter(Boolean)[0];
+      if (id && /^[\w-]{11}$/.test(id)) return id;
+    }
+
+    if (host === 'youtube.com' || host === 'youtube-nocookie.com') {
+      if (url.pathname === '/watch') {
+        const id = url.searchParams.get('v');
+        if (id && /^[\w-]{11}$/.test(id)) return id;
+      }
+      const segMatch = url.pathname.match(/\/(embed|shorts|live)\/([\w-]{11})/);
+      if (segMatch) return segMatch[2];
+    }
+  } catch (e) {
+    // URL로 해석 안 되면 아래 정규식 fallback으로 진행
+  }
+
+  // 마지막 fallback: 문자열 어디에든 11자 영상 ID 패턴이 있으면 사용
+  const fallback = input.match(/([\w-]{11})(?:[?&#]|$)/);
+  if (fallback) return fallback[1];
+
   return null;
 }
 
 let pendingVideoId = null;
+let ytApiFailed = false;
+
+// iframe_api 스크립트가 아예 못 뜨는 경우(인터넷 끊김/방화벽/유튜브 차단 등)를 대비해
+// 일정 시간 안에 API가 준비되지 않으면 명확한 에러를 보여준다. 이게 없으면
+// "불러오기"를 눌러도 pendingVideoId만 쌓이고 아무 반응이 없는 것처럼 보인다.
+setTimeout(() => {
+  if (typeof YT === 'undefined' || !YT.Player) {
+    ytApiFailed = true;
+    console.warn('YouTube IFrame API가 로드되지 않았습니다 (네트워크/방화벽 문제일 수 있음).');
+  }
+}, 6000);
 
 function onYouTubeIframeAPIReady() {
   player = new YT.Player('player', {
@@ -263,6 +296,7 @@ function onYouTubeIframeAPIReady() {
     events: {
       onReady: () => {
         player.setVolume(settings.quietVolume);
+        pendingVideoId = null;
       },
     },
   });
@@ -272,12 +306,15 @@ window.onYouTubeIframeAPIReady = onYouTubeIframeAPIReady;
 document.getElementById('loadYt').addEventListener('click', () => {
   const raw = document.getElementById('ytUrl').value;
   const id = extractVideoId(raw);
-  if (!id) return alert('유효한 유튜브 URL 또는 영상 ID가 아닙니다.');
+  if (!id) return alert('유효한 유튜브 URL 또는 영상 ID가 아닙니다.\n예: https://www.youtube.com/watch?v=xxxxxxxxxxx');
 
   if (player && typeof player.loadVideoById === 'function') {
     player.loadVideoById(id);
+  } else if (ytApiFailed) {
+    alert('유튜브 플레이어를 불러오지 못했습니다.\n인터넷 연결 또는 방화벽/보안 프로그램이 youtube.com 접속을 막고 있는지 확인해주세요.');
   } else {
     pendingVideoId = id;
+    alert('유튜브 플레이어를 준비 중입니다. 잠시 후 자동으로 불러올게요.');
   }
 });
 

@@ -286,19 +286,44 @@ function extractVideoId(input) {
 }
 
 let pendingVideoId = null;
+let ytReady = false;      // onYouTubeIframeAPIReady가 실제로 호출됐는지
 let ytApiFailed = false;
+
+const ytStatusEl = document.getElementById('ytStatus');
+const loadYtBtn = document.getElementById('loadYt');
+
+function setYtStatus(text) {
+  if (ytStatusEl) ytStatusEl.textContent = text;
+}
 
 // iframe_api 스크립트가 아예 못 뜨는 경우(인터넷 끊김/방화벽/유튜브 차단 등)를 대비해
 // 일정 시간 안에 API가 준비되지 않으면 명확한 에러를 보여준다. 이게 없으면
 // "불러오기"를 눌러도 pendingVideoId만 쌓이고 아무 반응이 없는 것처럼 보인다.
-setTimeout(() => {
-  if (typeof YT === 'undefined' || !YT.Player) {
+// 주의: iframe_api는 두 단계로 로드된다 (1. 부트스트랩 스크립트 자체가 뜨는 것,
+// 2. 그 안에서 실제 플레이어 위젯 스크립트가 뜨면서 onYouTubeIframeAPIReady가 호출되는 것).
+// 그래서 "YT 객체가 있는지"가 아니라 "우리 콜백이 실제로 호출됐는지(ytReady)"로만 판단해야
+// 위젯이 아직 로딩 중인 정상적인 상황을 실패로 오판하지 않는다.
+const YT_TIMEOUT_MS = 12000;
+
+const ytTimeoutTimer = setTimeout(() => {
+  if (!ytReady) {
     ytApiFailed = true;
     console.warn('YouTube IFrame API가 로드되지 않았습니다 (네트워크/방화벽 문제일 수 있음).');
+
+    // 사용자가 이미 "불러오기"를 눌러 준비 중 상태로 기다리고 있었다면,
+    // 마냥 "준비 중"으로 멈춰 보이지 않도록 실패를 알려준다.
+    if (pendingVideoId) {
+      pendingVideoId = null;
+      setYtStatus('⚠️ 유튜브 플레이어를 불러오지 못했어요. 인터넷 연결 또는 방화벽/보안 프로그램이 youtube.com 접속을 막고 있는지 확인해주세요.');
+      loadYtBtn.disabled = false;
+    }
   }
-}, 6000);
+}, YT_TIMEOUT_MS);
 
 function onYouTubeIframeAPIReady() {
+  ytReady = true;
+  clearTimeout(ytTimeoutTimer);
+
   player = new YT.Player('player', {
     height: '220',
     width: '390',
@@ -307,6 +332,12 @@ function onYouTubeIframeAPIReady() {
     events: {
       onReady: () => {
         player.setVolume(settings.quietVolume);
+
+        if (pendingVideoId) {
+          setYtStatus('✅ 영상을 불러왔어요.');
+          loadYtBtn.disabled = false;
+        }
+
         pendingVideoId = null;
       },
     },
@@ -314,18 +345,20 @@ function onYouTubeIframeAPIReady() {
 }
 window.onYouTubeIframeAPIReady = onYouTubeIframeAPIReady;
 
-document.getElementById('loadYt').addEventListener('click', () => {
+loadYtBtn.addEventListener('click', () => {
   const raw = document.getElementById('ytUrl').value;
   const id = extractVideoId(raw);
   if (!id) return alert('유효한 유튜브 URL 또는 영상 ID가 아닙니다.\n예: https://www.youtube.com/watch?v=xxxxxxxxxxx');
 
   if (player && typeof player.loadVideoById === 'function') {
     player.loadVideoById(id);
+    setYtStatus('✅ 영상을 불러왔어요.');
   } else if (ytApiFailed) {
-    alert('유튜브 플레이어를 불러오지 못했습니다.\n인터넷 연결 또는 방화벽/보안 프로그램이 youtube.com 접속을 막고 있는지 확인해주세요.');
+    setYtStatus('⚠️ 유튜브 플레이어를 불러오지 못했어요. 인터넷 연결 또는 방화벽/보안 프로그램이 youtube.com 접속을 막고 있는지 확인해주세요.');
   } else {
     pendingVideoId = id;
-    alert('유튜브 플레이어를 준비 중입니다. 잠시 후 자동으로 불러올게요.');
+    loadYtBtn.disabled = true;
+    setYtStatus('⏳ 유튜브 플레이어를 준비 중이에요. 준비되는 대로 자동으로 불러올게요...');
   }
 });
 

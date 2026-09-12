@@ -372,10 +372,13 @@ function onYouTubeIframeAPIReady() {
   ytReady = true;
   clearTimeout(ytTimeoutTimer);
 
-  player = new YT.Player('player', {
+  // 주의: videoId 키를 항상 넣고 값만 undefined로 두면 안 된다.
+  // 유튜브 위젯 내부 검증이 "키가 아예 없는 것"과 "값 없이 키만 있는 것"을
+  // 다르게 취급해서, 아직 고른 영상이 없을 때(pendingVideoId=null) videoId 키를
+  // 넣어두면 "Invalid video id" 예외가 터지며 플레이어 생성 자체가 실패한다.
+  const playerOptions = {
     height: '220',
     width: '390',
-    videoId: pendingVideoId || undefined,
     playerVars: { autoplay: 0 },
     events: {
       onReady: () => {
@@ -390,7 +393,17 @@ function onYouTubeIframeAPIReady() {
         pendingVideoId = null;
       },
     },
-  });
+  };
+
+  if (pendingVideoId) {
+    playerOptions.videoId = pendingVideoId;
+  }
+
+  try {
+    player = new YT.Player('player', playerOptions);
+  } catch (err) {
+    failYtLoad(`플레이어 생성 중 오류: ${err && err.message ? err.message : err}`);
+  }
 }
 window.onYouTubeIframeAPIReady = onYouTubeIframeAPIReady;
 

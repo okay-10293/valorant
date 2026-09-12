@@ -238,6 +238,17 @@ document.getElementById('detectionToggle').addEventListener('change', (e) => {
   }
 });
 
+// ===== 유튜브 IFrame API 비동기 로드 =====
+// 주의: 이 스크립트를 index.html에 <script src="...">로 정적으로 넣으면 안 된다.
+// 그러면 이 요청이 응답 없이 지연될 때(방화벽/보안 프로그램 등) 브라우저가 그 뒤에 오는
+// renderer.js 자체를 실행하지 못해 앱의 모든 버튼이 먹통이 된다. 반드시 동적으로,
+// 논블로킹으로 삽입해야 나머지 UI 로직이 네트워크 상태와 무관하게 항상 살아있다.
+(function loadYoutubeIframeApi() {
+  const tag = document.createElement('script');
+  tag.src = 'https://www.youtube.com/iframe_api';
+  document.head.appendChild(tag);
+})();
+
 // ===== 유튜브 플레이어 =====
 function extractVideoId(input) {
   input = input.trim();

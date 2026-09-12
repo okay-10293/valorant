@@ -25,7 +25,31 @@ let detectionEnabled = false;
 let captureTimer = null;
 
 let player = null; // YT.Player
+let localAudio = null; // <audio> (로컬 파일 재생용)
+let activeSource = null; // 'youtube' | 'local' | null
 let fadeInterval = null;
+
+// fadeVolumeTo 등에서 유튜브/로컬 파일 어느 쪽이 재생 중이든 동일하게
+// 볼륨을 제어할 수 있도록 감싸는 래퍼.
+const audioController = {
+  setVolume(v) {
+    const vol = Math.max(0, Math.min(100, Math.round(v)));
+    if (activeSource === 'youtube' && player && typeof player.setVolume === 'function') {
+      player.setVolume(vol);
+    } else if (activeSource === 'local' && localAudio) {
+      localAudio.volume = vol / 100;
+    }
+  },
+  getVolume() {
+    if (activeSource === 'youtube' && player && typeof player.getVolume === 'function') {
+      return player.getVolume();
+    }
+    if (activeSource === 'local' && localAudio) {
+      return Math.round(localAudio.volume * 100);
+    }
+    return 0;
+  },
+};
 
 let settings = {
   quietVolume: 20,
@@ -331,7 +355,8 @@ function onYouTubeIframeAPIReady() {
     playerVars: { autoplay: 0 },
     events: {
       onReady: () => {
-        player.setVolume(settings.quietVolume);
+        activeSource = 'youtube';
+        audioController.setVolume(settings.quietVolume);
 
         if (pendingVideoId) {
           setYtStatus('✅ 영상을 불러왔어요.');
@@ -352,9 +377,10 @@ loadYtBtn.addEventListener('click', () => {
 
   if (player && typeof player.loadVideoById === 'function') {
     player.loadVideoById(id);
+    activeSource = 'youtube';
     setYtStatus('✅ 영상을 불러왔어요.');
   } else if (ytApiFailed) {
-    setYtStatus('⚠️ 유튜브 플레이어를 불러오지 못했어요. 인터넷 연결 또는 방화벽/보안 프로그램이 youtube.com 접속을 막고 있는지 확인해주세요.');
+    setYtStatus('⚠️ 유튜브 플레이어를 불러오지 못했어요. 인터넷 연결 또는 방화벽/보안 프로그램이 youtube.com 접속을 막고 있는지 확인해주세요. (학교 PC라면 아래 "내 PC의 음악 파일 불러오기"를 대신 써보세요.)');
   } else {
     pendingVideoId = id;
     loadYtBtn.disabled = true;
@@ -362,17 +388,54 @@ loadYtBtn.addEventListener('click', () => {
   }
 });
 
+// ===== 로컬 음악 파일 재생 (유튜브 접속이 막힌 환경을 위한 대안) =====
+// 학교 PC처럼 유튜브 자체가 네트워크 레벨에서 막혀있으면 iframe API가 영영 준비되지
+// 않을 수 있다. 이런 경우에도 볼륨 자동 조절 기능은 쓸 수 있도록, 내 PC에 있는
+// 음악 파일을 직접 골라 재생하는 경로를 별도로 둔다. 볼륨 제어는 audioController를
+// 통해 유튜브 플레이어와 완전히 동일하게 동작한다.
+localAudio = document.getElementById('localAudio');
+
+const localFileInput = document.getElementById('localAudioFile');
+const loadLocalFileBtn = document.getElementById('loadLocalFile');
+const localAudioStatusEl = document.getElementById('localAudioStatus');
+
+function setLocalAudioStatus(text) {
+  if (localAudioStatusEl) localAudioStatusEl.textContent = text;
+}
+
+loadLocalFileBtn.addEventListener('click', () => localFileInput.click());
+
+localFileInput.addEventListener('change', () => {
+  const file = localFileInput.files && localFileInput.files[0];
+  if (!file) return;
+
+  const objectUrl = URL.createObjectURL(file);
+  localAudio.src = objectUrl;
+  localAudio.currentTime = 0;
+
+  localAudio.play()
+    .then(() => {
+      activeSource = 'local';
+      audioController.setVolume(settings.quietVolume);
+      setLocalAudioStatus(`✅ "${file.name}" 재생 중이에요. (반복 재생)`);
+    })
+    .catch((err) => {
+      console.warn('로컬 파일 재생 실패:', err);
+      setLocalAudioStatus('⚠️ 파일을 재생하지 못했어요. 지원되는 오디오/영상 파일인지 확인해주세요.');
+    });
+});
+
 function fadeVolumeTo(target, durationMs) {
-  if (!player || typeof player.setVolume !== 'function') return;
+  if (!activeSource) return;
   clearInterval(fadeInterval);
-  const start = player.getVolume();
+  const start = audioController.getVolume();
   const steps = 20;
   const stepTime = durationMs / steps;
   let i = 0;
   fadeInterval = setInterval(() => {
     i++;
     const v = start + (target - start) * (i / steps);
-    player.setVolume(Math.max(0, Math.min(100, Math.round(v))));
+    audioController.setVolume(v);
     if (i >= steps) clearInterval(fadeInterval);
   }, stepTime);
 }

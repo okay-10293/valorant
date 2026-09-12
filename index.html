@@ -63,6 +63,13 @@
           <p class="hint" id="ytStatus"></p>
           <div id="player"></div>
 
+          <div class="yt-input-row">
+            <button id="loadLocalFile">🎵 내 PC의 음악 파일 불러오기</button>
+          </div>
+          <p class="hint" id="localAudioStatus">유튜브 접속이 막혀있는 환경(학교 PC 등)이라면 이걸 대신 써주세요.</p>
+          <input id="localAudioFile" type="file" accept="audio/*,video/*" class="hidden-file-input" />
+          <audio id="localAudio" loop></audio>
+
           <p class="step-title">볼륨 설정</p>
           <div class="slider-row">
             <label>평소(생존) 볼륨 <span id="quietVal">20</span>%</label>

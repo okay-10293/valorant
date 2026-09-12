@@ -32,6 +32,12 @@ ipcMain.handle('get-screen-sources', async () => {
   }));
 });
 
+// 진단용: 유튜브 로딩 문제 등을 확인할 수 있도록 개발자 도구를 바로 열어준다.
+// (PC방 등에서 단축키(F12/Ctrl+Shift+I)가 막혀 있어도 앱 안 버튼으로 열 수 있게)
+ipcMain.handle('open-devtools', () => {
+  mainWindow?.webContents.openDevTools({ mode: 'detach' });
+});
+
 app.whenReady().then(() => {
   createWindow();
   app.on('activate', () => {

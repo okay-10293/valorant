@@ -267,9 +267,49 @@ document.getElementById('detectionToggle').addEventListener('change', (e) => {
 // 그러면 이 요청이 응답 없이 지연될 때(방화벽/보안 프로그램 등) 브라우저가 그 뒤에 오는
 // renderer.js 자체를 실행하지 못해 앱의 모든 버튼이 먹통이 된다. 반드시 동적으로,
 // 논블로킹으로 삽입해야 나머지 UI 로직이 네트워크 상태와 무관하게 항상 살아있다.
+
+let pendingVideoId = null;
+let ytReady = false;        // onYouTubeIframeAPIReady가 실제로 호출됐는지
+let ytApiFailed = false;
+let ytScriptLoaded = false; // <script src=iframe_api> 자체가 로드는 됐는지 (실패 원인 구분용)
+
+const ytStatusEl = document.getElementById('ytStatus');
+const loadYtBtn = document.getElementById('loadYt');
+
+function setYtStatus(text) {
+  if (ytStatusEl) ytStatusEl.textContent = text;
+}
+
+function failYtLoad(reason) {
+  ytApiFailed = true;
+  console.error('유튜브 플레이어를 불러오지 못했습니다:', reason);
+
+  if (pendingVideoId) {
+    pendingVideoId = null;
+    setYtStatus(`⚠️ 유튜브 플레이어를 불러오지 못했어요. (${reason}) 방화벽/백신/PC방 관리 프로그램이 이 프로그램의 인터넷 접속을 차단하고 있을 수 있어요.`);
+    loadYtBtn.disabled = false;
+  }
+}
+
+document.getElementById('openDevtoolsBtn')?.addEventListener('click', () => {
+  window.electronAPI?.openDevtools?.();
+});
+
 (function loadYoutubeIframeApi() {
   const tag = document.createElement('script');
   tag.src = 'https://www.youtube.com/iframe_api';
+
+  // 스크립트 파일 자체를 못 받아온 경우 (net::ERR_* 등) - 이건 아예 접속이
+  // 막혔다는 뜻이라 12초씩 기다릴 필요 없이 바로 알 수 있다.
+  tag.onerror = () => {
+    failYtLoad('iframe_api 스크립트 자체를 불러오지 못함 - net::ERR_*');
+  };
+
+  tag.onload = () => {
+    ytScriptLoaded = true;
+    console.log('유튜브 iframe_api 부트스트랩 스크립트는 정상적으로 로드됐습니다.');
+  };
+
   document.head.appendChild(tag);
 })();
 
@@ -309,20 +349,9 @@ function extractVideoId(input) {
   return null;
 }
 
-let pendingVideoId = null;
-let ytReady = false;      // onYouTubeIframeAPIReady가 실제로 호출됐는지
-let ytApiFailed = false;
-
-const ytStatusEl = document.getElementById('ytStatus');
-const loadYtBtn = document.getElementById('loadYt');
-
-function setYtStatus(text) {
-  if (ytStatusEl) ytStatusEl.textContent = text;
-}
-
-// iframe_api 스크립트가 아예 못 뜨는 경우(인터넷 끊김/방화벽/유튜브 차단 등)를 대비해
-// 일정 시간 안에 API가 준비되지 않으면 명확한 에러를 보여준다. 이게 없으면
-// "불러오기"를 눌러도 pendingVideoId만 쌓이고 아무 반응이 없는 것처럼 보인다.
+// iframe_api 스크립트는 떴는데 위젯 초기화(onYouTubeIframeAPIReady)가 끝내 안 되는
+// 경우를 대비해, 일정 시간 안에 API가 준비되지 않으면 명확한 에러를 보여준다.
+// 이게 없으면 "불러오기"를 눌러도 pendingVideoId만 쌓이고 아무 반응이 없는 것처럼 보인다.
 // 주의: iframe_api는 두 단계로 로드된다 (1. 부트스트랩 스크립트 자체가 뜨는 것,
 // 2. 그 안에서 실제 플레이어 위젯 스크립트가 뜨면서 onYouTubeIframeAPIReady가 호출되는 것).
 // 그래서 "YT 객체가 있는지"가 아니라 "우리 콜백이 실제로 호출됐는지(ytReady)"로만 판단해야
@@ -330,17 +359,12 @@ function setYtStatus(text) {
 const YT_TIMEOUT_MS = 12000;
 
 const ytTimeoutTimer = setTimeout(() => {
-  if (!ytReady) {
-    ytApiFailed = true;
-    console.warn('YouTube IFrame API가 로드되지 않았습니다 (네트워크/방화벽 문제일 수 있음).');
+  if (!ytReady && !ytApiFailed) {
+    const reason = ytScriptLoaded
+      ? '부트스트랩 스크립트는 로드됐지만 위젯 초기화가 끝나지 않음 (2단계 스크립트가 차단됐을 가능성)'
+      : '부트스트랩 스크립트 로드 응답이 없음 (요청이 걸린 채로 멈춤)';
 
-    // 사용자가 이미 "불러오기"를 눌러 준비 중 상태로 기다리고 있었다면,
-    // 마냥 "준비 중"으로 멈춰 보이지 않도록 실패를 알려준다.
-    if (pendingVideoId) {
-      pendingVideoId = null;
-      setYtStatus('⚠️ 유튜브 플레이어를 불러오지 못했어요. 인터넷 연결 또는 방화벽/보안 프로그램이 youtube.com 접속을 막고 있는지 확인해주세요.');
-      loadYtBtn.disabled = false;
-    }
+    failYtLoad(reason);
   }
 }, YT_TIMEOUT_MS);
 
@@ -380,7 +404,7 @@ loadYtBtn.addEventListener('click', () => {
     activeSource = 'youtube';
     setYtStatus('✅ 영상을 불러왔어요.');
   } else if (ytApiFailed) {
-    setYtStatus('⚠️ 유튜브 플레이어를 불러오지 못했어요. 인터넷 연결 또는 방화벽/보안 프로그램이 youtube.com 접속을 막고 있는지 확인해주세요. (학교 PC라면 아래 "내 PC의 음악 파일 불러오기"를 대신 써보세요.)');
+    setYtStatus('⚠️ 유튜브 플레이어를 불러오지 못했어요. 방화벽/백신/PC방 관리 프로그램이 이 프로그램의 인터넷 접속을 차단하고 있을 수 있어요. (개발자 도구 콘솔에서 자세한 이유를 확인할 수 있어요. 계속 안 되면 아래 "내 PC의 음악 파일 불러오기"를 대신 써보세요.)');
   } else {
     pendingVideoId = id;
     loadYtBtn.disabled = true;

@@ -127,7 +127,7 @@ overlayCanvas.addEventListener('mouseup', (e) => {
 
 function drawSelectionBox(start, end) {
   overlayCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
-  overlayCtx.strokeStyle = '#ff4655';
+  overlayCtx.strokeStyle = '#e8a33d';
   overlayCtx.lineWidth = 2;
   const x = Math.min(start.x, end.x);
   const y = Math.min(start.y, end.y);
@@ -139,7 +139,7 @@ function drawSelectionBox(start, end) {
 function drawPersistedRegionBox() {
   if (!region) return;
   overlayCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
-  overlayCtx.strokeStyle = '#4ade80';
+  overlayCtx.strokeStyle = '#6fa373';
   overlayCtx.lineWidth = 2;
   overlayCtx.strokeRect(region.x, region.y, region.w, region.h);
 }
@@ -215,7 +215,9 @@ function detectTick() {
 function onStateChange(state) {
   const label = document.getElementById('stateLabel');
   label.textContent = state;
-  label.className = 'state-badge ' + (state === 'DEAD' ? 'dead' : 'alive');
+  const readout = document.getElementById('ledReadout');
+  readout.classList.remove('is-alive', 'is-dead');
+  readout.classList.add(state === 'DEAD' ? 'is-dead' : 'is-alive');
 
   const target = state === 'DEAD' ? settings.loudVolume : settings.quietVolume;
   fadeVolumeTo(target, settings.fadeDuration);

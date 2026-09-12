@@ -7,69 +7,84 @@
 </head>
 <body>
   <div class="app">
-    <!-- 좌측: 캡처 소스 + 미리보기 + 영역 지정 -->
-    <div class="panel left">
-      <h2>1. 캡처할 화면 선택</h2>
-      <select id="sourceSelect"></select>
-      <button id="refreshSources">새로고침</button>
+    <div class="console-frame">
 
-      <h2>2. 감지 영역 (자동 설정됨)</h2>
-      <p class="hint">기본값으로 죽었을 때 뜨는 "플레이어 변경" UI 위치가 이미 지정되어 있습니다. 아래 미리보기에 초록 박스로 표시됩니다.</p>
-      <div class="canvas-wrap">
-        <canvas id="preview" width="480" height="270"></canvas>
-        <canvas id="overlay" width="480" height="270"></canvas>
-      </div>
-
-      <div class="status-row">
-        <span>현재 판정: </span>
-        <span id="stateLabel" class="state-badge alive">ALIVE</span>
-      </div>
-      <div class="debug-row">
-        <span id="debugColor">-</span>
-      </div>
-
-      <details class="advanced">
-        <summary>⚙ 고급: 감지가 잘 안 맞으면 직접 재보정</summary>
-        <p class="hint">해상도/UI 스케일이 달라서 기본값이 안 맞을 때만 사용하세요.
-        미리보기 위에서 "플레이어 변경" UI가 뜨는 부분을 드래그로 다시 지정한 뒤,
-        게임에서 실제로 살아있을 때/죽었을 때 각각 버튼을 눌러 저장하세요.</p>
-        <div class="calib-row">
-          <button id="calibAlive">🟢 살아있을 때 저장</button>
-          <button id="calibDead">🔴 죽었을 때 저장</button>
+      <!-- 상단 계기판: 지금 판정 상태를 LED처럼 표시 -->
+      <div class="meter-strip">
+        <span class="app-name">리스폰 뮤직 · 신호 감지</span>
+        <div class="debug-readout"><span id="debugColor">-</span></div>
+        <div class="led-readout is-alive" id="ledReadout">
+          <span class="led-dot"></span>
+          <span class="state-label">판정 <b id="stateLabel">ALIVE</b></span>
         </div>
-        <button id="resetDefaults">기본값으로 초기화</button>
-      </details>
-    </div>
-
-    <!-- 우측: 유튜브 + 볼륨 설정 -->
-    <div class="panel right">
-      <h2>유튜브</h2>
-      <div class="yt-input-row">
-        <input id="ytUrl" type="text" placeholder="유튜브 URL 또는 영상 ID 붙여넣기" />
-        <button id="loadYt">불러오기</button>
-      </div>
-      <div id="player"></div>
-
-      <h2>볼륨 설정</h2>
-      <div class="slider-row">
-        <label>평소(생존) 볼륨: <span id="quietVal">20</span>%</label>
-        <input type="range" id="quietVolume" min="0" max="100" value="20" />
-      </div>
-      <div class="slider-row">
-        <label>사망 시 볼륨: <span id="loudVal">80</span>%</label>
-        <input type="range" id="loudVolume" min="0" max="100" value="80" />
-      </div>
-      <div class="slider-row">
-        <label>전환 속도(페이드): <span id="fadeVal">800</span>ms</label>
-        <input type="range" id="fadeDuration" min="100" max="3000" step="100" value="800" />
-      </div>
-      <div class="slider-row">
-        <label>감지 민감도(연속 프레임): <span id="confirmVal">3</span></label>
-        <input type="range" id="confirmFrames" min="1" max="10" value="3" />
       </div>
 
-      <div class="toggle-row">
-        <label><input type="checkbox" id="detectionToggle" /> 감지 시작</label>
+      <div class="console-body">
+        <!-- 좌측: 캡처 소스 + 미리보기 + 영역 지정 -->
+        <div class="bay">
+          <p class="bay-label">신호 입력</p>
+
+          <p class="step-title">1. 캡처할 화면 선택</p>
+          <select id="sourceSelect"></select>
+          <button id="refreshSources">새로고침</button>
+
+          <p class="step-title">2. 감지 영역 (자동 설정됨)</p>
+          <p class="hint">기본값으로 죽었을 때 뜨는 "플레이어 변경" UI 위치가 이미 지정되어 있습니다. 아래 미리보기에 초록 박스로 표시됩니다.</p>
+          <div class="canvas-wrap">
+            <canvas id="preview" width="480" height="270"></canvas>
+            <canvas id="overlay" width="480" height="270"></canvas>
+          </div>
+
+          <details class="advanced">
+            <summary>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+              고급: 감지가 잘 안 맞으면 직접 재보정
+            </summary>
+            <p class="hint">해상도/UI 스케일이 달라서 기본값이 안 맞을 때만 사용하세요.
+            미리보기 위에서 "플레이어 변경" UI가 뜨는 부분을 드래그로 다시 지정한 뒤,
+            게임에서 실제로 살아있을 때/죽었을 때 각각 버튼을 눌러 저장하세요.</p>
+            <div class="calib-row">
+              <button id="calibAlive"><span class="calib-dot alive"></span>살아있을 때 저장</button>
+              <button id="calibDead"><span class="calib-dot dead"></span>죽었을 때 저장</button>
+            </div>
+            <button id="resetDefaults">기본값으로 초기화</button>
+          </details>
+        </div>
+
+        <!-- 우측: 유튜브 + 볼륨 설정 -->
+        <div class="bay">
+          <p class="bay-label">오디오 출력</p>
+
+          <p class="step-title">유튜브 트랙</p>
+          <div class="yt-input-row">
+            <input id="ytUrl" type="text" placeholder="유튜브 URL 또는 영상 ID 붙여넣기" />
+            <button class="primary" id="loadYt">불러오기</button>
+          </div>
+          <div id="player"></div>
+
+          <p class="step-title">볼륨 설정</p>
+          <div class="slider-row">
+            <label>평소(생존) 볼륨 <span id="quietVal">20</span>%</label>
+            <input type="range" id="quietVolume" min="0" max="100" value="20" />
+          </div>
+          <div class="slider-row">
+            <label>사망 시 볼륨 <span id="loudVal">80</span>%</label>
+            <input type="range" id="loudVolume" min="0" max="100" value="80" />
+          </div>
+          <div class="slider-row">
+            <label>전환 속도(페이드) <span id="fadeVal">800</span>ms</label>
+            <input type="range" id="fadeDuration" min="100" max="3000" step="100" value="800" />
+          </div>
+          <div class="slider-row">
+            <label>감지 민감도(연속 프레임) <span id="confirmVal">3</span></label>
+            <input type="range" id="confirmFrames" min="1" max="10" value="3" />
+          </div>
+
+          <div class="toggle-row">
+            <input type="checkbox" id="detectionToggle" />
+            <label for="detectionToggle">감지 시작</label>
+          </div>
+        </div>
       </div>
     </div>
   </div>

@@ -1,81 +1,203 @@
+/* ── 톤: 게이밍 대시보드가 아니라 아날로그 믹싱 콘솔 / VU 미터 계기판 ──
+   화면 색을 읽어 오디오로 바꾸는 앱이라, 신호를 다루는 하드웨어의 언어를 빌려온다. */
+
+:root {
+  --bg: #14120f;
+  --panel: #1b1815;
+  --line: #3a352c;
+  --line-soft: #262319;
+  --text: #ece6d8;
+  --text-dim: #948d7d;
+  --text-faint: #5c5648;
+  --amber: #e8a33d;
+  --amber-dim: #7a5b28;
+  --led-green: #6fa373;
+  --led-green-dim: #2c3b2a;
+  --led-red: #b3543f;
+  --led-red-dim: #3d2723;
+  --mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
+  --sans: -apple-system, "Segoe UI", "Malgun Gothic", sans-serif;
+}
+
 * { box-sizing: border-box; }
 
 body {
   margin: 0;
-  font-family: -apple-system, "Segoe UI", "Malgun Gothic", sans-serif;
-  background: #111319;
-  color: #e6e8ee;
+  font-family: var(--sans);
+  background: var(--bg);
+  color: var(--text);
 }
 
+/* 콘솔 전체를 하나의 하드웨어 유닛처럼: 바깥 프레임 하나 + 안쪽은 실선으로 구획 */
 .app {
   display: flex;
-  gap: 20px;
-  padding: 20px;
+  flex-direction: column;
   height: 100vh;
+  padding: 14px;
+  gap: 0;
 }
 
-.panel {
-  background: #171a22;
-  border: 1px solid #262b38;
-  border-radius: 10px;
-  padding: 16px 18px;
+.console-frame {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: linear-gradient(180deg, #1d1a16 0%, var(--panel) 40px);
+  overflow: hidden;
+}
+
+/* 상단 신호 표시부: 실제 계기판처럼 LED 판독값 + 라벨을 한 줄로 */
+.meter-strip {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  padding: 12px 18px;
+  border-bottom: 1px solid var(--line);
+  background: #17140f;
+}
+
+.meter-strip .app-name {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--text-faint);
+  letter-spacing: 0.02em;
+  margin-right: auto;
+}
+
+.led-readout {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--mono);
+  font-size: 12px;
+}
+
+.led-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--led-green-dim);
+  box-shadow: none;
+  transition: background .3s, box-shadow .3s;
+}
+.led-readout.is-dead .led-dot {
+  background: var(--led-red);
+  box-shadow: 0 0 6px 1px rgba(179, 84, 63, 0.55);
+  animation: led-pulse 1.6s ease-in-out infinite;
+}
+.led-readout.is-alive .led-dot {
+  background: var(--led-green);
+}
+@keyframes led-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.45; }
+}
+
+.state-label {
+  color: var(--text-dim);
+}
+.state-label b {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.debug-readout {
+  font-family: var(--mono);
+  font-size: 10.5px;
+  color: var(--text-faint);
+}
+
+/* 본문: 두 구역을 카드로 띄우지 않고, 하나의 판 위에 세로 실선으로 구획 */
+.console-body {
+  flex: 1;
+  display: flex;
+  overflow: hidden;
+}
+
+.bay {
+  flex: 1;
+  padding: 20px 22px;
   overflow-y: auto;
 }
-
-.left { flex: 1.1; }
-.right { flex: 1; }
-
-h2 {
-  font-size: 14px;
-  color: #ff4655;
-  margin: 18px 0 8px;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
+.bay + .bay {
+  border-left: 1px solid var(--line);
 }
-h2:first-child { margin-top: 0; }
+
+.bay-label {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--amber);
+  margin: 0 0 4px;
+}
+
+.step-title {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--text);
+  margin: 20px 0 8px;
+}
+.step-title:first-of-type { margin-top: 0; }
 
 .hint {
   font-size: 12px;
-  color: #8b91a3;
-  margin: 0 0 8px;
+  color: var(--text-dim);
+  line-height: 1.55;
+  margin: 0 0 10px;
 }
 
 select, input[type="text"] {
   width: 100%;
-  padding: 8px 10px;
-  background: #0d0f14;
-  border: 1px solid #2c3140;
-  color: #e6e8ee;
-  border-radius: 6px;
+  padding: 9px 11px;
+  background: #100e0b;
+  border: 1px solid var(--line);
+  color: var(--text);
+  border-radius: 4px;
   font-size: 13px;
+  font-family: var(--sans);
+}
+select:focus, input[type="text"]:focus, input[type="range"]:focus-visible, button:focus-visible {
+  outline: 2px solid var(--amber-dim);
+  outline-offset: 1px;
 }
 
 button {
   margin-top: 8px;
   padding: 8px 14px;
-  background: #ff4655;
-  border: none;
-  color: white;
-  border-radius: 6px;
+  background: #24211a;
+  border: 1px solid var(--line);
+  color: var(--text);
+  border-radius: 4px;
   cursor: pointer;
-  font-size: 13px;
+  font-size: 12.5px;
   font-weight: 600;
+  font-family: var(--sans);
+  transition: border-color .15s, background .15s;
 }
-button:hover { background: #ff5c6a; }
+button:hover { background: #2b271f; border-color: var(--text-faint); }
+
+/* 주요 액션 버튼만 앰버로 구분 (위계 표시 — 모든 버튼을 같은 색으로 두지 않는다) */
+button.primary {
+  background: var(--amber);
+  border-color: var(--amber);
+  color: #1a1408;
+}
+button.primary:hover { background: #f0af4d; }
 
 .canvas-wrap {
   position: relative;
-  width: 480px;
-  height: 270px;
-  border: 1px solid #2c3140;
-  border-radius: 6px;
+  width: 100%;
+  max-width: 420px;
+  aspect-ratio: 16 / 9;
+  border: 1px solid var(--line);
   overflow: hidden;
+  background: #000;
 }
 #preview, #overlay {
   position: absolute;
   top: 0; left: 0;
-  width: 480px;
-  height: 270px;
+  width: 100%;
+  height: 100%;
 }
 #overlay { cursor: crosshair; }
 
@@ -85,47 +207,38 @@ button:hover { background: #ff5c6a; }
 }
 .calib-row button {
   flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
 }
+.calib-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex: none;
+}
+.calib-dot.alive { background: var(--led-green); }
+.calib-dot.dead { background: var(--led-red); }
 
 .advanced {
-  margin-top: 16px;
-  border-top: 1px solid #262b38;
-  padding-top: 10px;
+  margin-top: 18px;
+  border-top: 1px solid var(--line-soft);
+  padding-top: 12px;
 }
 .advanced summary {
   cursor: pointer;
   font-size: 12px;
-  color: #8b91a3;
+  color: var(--text-dim);
   user-select: none;
-}
-.advanced summary:hover { color: #b6bbca; }
-.advanced #resetDefaults {
-  background: #2c3140;
-  width: 100%;
-}
-.advanced #resetDefaults:hover { background: #384056; }
-
-.status-row {
-  margin-top: 14px;
-  font-size: 14px;
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
 }
-.state-badge {
-  padding: 3px 10px;
-  border-radius: 12px;
-  font-weight: 700;
-  font-size: 12px;
-}
-.state-badge.alive { background: #1c3d2c; color: #4ade80; }
-.state-badge.dead { background: #3d1c1c; color: #f87171; }
-
-.debug-row {
-  margin-top: 6px;
-  font-size: 11px;
-  color: #5a6072;
-  font-family: monospace;
+.advanced summary:hover { color: var(--text); }
+.advanced summary svg { flex: none; opacity: .8; }
+.advanced #resetDefaults {
+  width: 100%;
 }
 
 .yt-input-row {
@@ -137,26 +250,65 @@ button:hover { background: #ff5c6a; }
 
 #player {
   margin-top: 12px;
-  border-radius: 8px;
+  border: 1px solid var(--line);
   overflow: hidden;
 }
 
+/* 슬라이더: 눈금 라벨을 두어 실제 콘솔 페이더 같은 느낌 */
 .slider-row {
-  margin: 14px 0;
+  margin: 16px 0;
 }
 .slider-row label {
-  display: block;
+  display: flex;
+  justify-content: space-between;
   font-size: 12px;
-  color: #b6bbca;
-  margin-bottom: 4px;
+  color: var(--text-dim);
+  margin-bottom: 6px;
+  font-family: var(--mono);
 }
+.slider-row label span { color: var(--amber); }
+
 .slider-row input[type="range"] {
   width: 100%;
+  -webkit-appearance: none;
+  height: 3px;
+  background: var(--line);
+  border-radius: 2px;
+}
+.slider-row input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+  background: var(--amber);
+  border: 2px solid #1a1408;
+  cursor: pointer;
+}
+.slider-row input[type="range"]::-moz-range-thumb {
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+  background: var(--amber);
+  border: 2px solid #1a1408;
+  cursor: pointer;
 }
 
 .toggle-row {
-  margin-top: 20px;
-  padding-top: 14px;
-  border-top: 1px solid #262b38;
-  font-size: 14px;
+  margin-top: 22px;
+  padding-top: 16px;
+  border-top: 1px solid var(--line-soft);
+  font-size: 13.5px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.toggle-row input[type="checkbox"] {
+  width: 15px;
+  height: 15px;
+  accent-color: var(--amber);
+}
+
+@media (max-width: 720px) {
+  .console-body { flex-direction: column; }
+  .bay + .bay { border-left: none; border-top: 1px solid var(--line); }
 }

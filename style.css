@@ -87,6 +87,24 @@ button:hover { background: #ff5c6a; }
   flex: 1;
 }
 
+.advanced {
+  margin-top: 16px;
+  border-top: 1px solid #262b38;
+  padding-top: 10px;
+}
+.advanced summary {
+  cursor: pointer;
+  font-size: 12px;
+  color: #8b91a3;
+  user-select: none;
+}
+.advanced summary:hover { color: #b6bbca; }
+.advanced #resetDefaults {
+  background: #2c3140;
+  width: 100%;
+}
+.advanced #resetDefaults:hover { background: #384056; }
+
 .status-row {
   margin-top: 14px;
   font-size: 14px;

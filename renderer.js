@@ -1,3 +1,10 @@
+// ===== 기본값 (오케이 실제 스크린샷에서 측정한 값) =====
+// 좌하단 "플레이어 변경" 스펙테이터 UI 박스 위치 (480x270 미리보기 캔버스 기준)
+// 원본 1920x1080에서 x:110~290, y:800~850 영역을 480x270 비율로 환산한 값
+const DEFAULT_REGION = { x: 27, y: 200, w: 45, h: 12 };
+const DEFAULT_DEAD_COLOR = { r: 34, g: 45, b: 40 };   // 죽었을 때 (어두운 반투명 박스)
+const DEFAULT_ALIVE_COLOR = { r: 63, g: 97, b: 110 }; // 살아있을 때 (그 자리엔 게임 배경)
+
 // ===== 전역 상태 =====
 let mediaStream = null;
 let videoEl = null;
@@ -6,9 +13,9 @@ let previewCtx = previewCanvas.getContext('2d', { willReadFrequently: true });
 let overlayCanvas = document.getElementById('overlay');
 let overlayCtx = overlayCanvas.getContext('2d');
 
-let region = null; // { x, y, w, h } - preview 캔버스 좌표계 기준
-let aliveColor = null; // { r, g, b }
-let deadColor = null;
+let region = { ...DEFAULT_REGION };
+let aliveColor = { ...DEFAULT_ALIVE_COLOR };
+let deadColor = { ...DEFAULT_DEAD_COLOR };
 
 let currentState = 'ALIVE';
 let pendingState = null;
@@ -77,6 +84,7 @@ async function startCapture(sourceId) {
 
   // 캡처 원본 비율을 유지하면서 480x270 미리보기에 맞춤 (좌표계는 항상 480x270)
   drawLoop();
+  setTimeout(drawPersistedRegionBox, 300);
 }
 
 function drawLoop() {
@@ -167,6 +175,13 @@ document.getElementById('calibDead').addEventListener('click', () => {
   const c = getRegionAverageColor();
   if (!c) return alert('먼저 감지 영역을 드래그로 지정하세요.');
   deadColor = c;
+  drawPersistedRegionBox();
+});
+
+document.getElementById('resetDefaults').addEventListener('click', () => {
+  region = { ...DEFAULT_REGION };
+  aliveColor = { ...DEFAULT_ALIVE_COLOR };
+  deadColor = { ...DEFAULT_DEAD_COLOR };
   drawPersistedRegionBox();
 });
 
